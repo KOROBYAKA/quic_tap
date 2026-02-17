@@ -1,0 +1,11 @@
+[package]
+name = "quic_tap"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossbeam-channel = "0.5.15"
+mpsc = "0.2.6"
+pcap-file = "2.0.0"
+quinn = "0.11.9"
+quinn-udp = "0.5.14"
