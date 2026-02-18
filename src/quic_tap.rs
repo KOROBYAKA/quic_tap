@@ -6,11 +6,14 @@ struct TeeUdpSock {
 }
 
 impl TeeUdpSock {
-    fn new(real_udp_sock: Arc<dyn AsyncUdpSocket>, channel: Sender) -> TeeUdpSock {
-        TeeUdpSock {
-            udp_sock: real_udp_sock,
-            send_channel: channel,
-            local_addr: real_udp_sock.local_addr(),
+    fn new(real_udp_sock: Arc<dyn AsyncUdpSocket>, channel: Sender) -> Result<TeeUdpSock> {
+        match real_udp_sock.local_addr() {
+            Ok(local_addr) => Ok(TeeUdpSock {
+                udp_sock: real_udp_sock,
+                send_channel: channel,
+                local_addr: local_addr,
+            }),
+            Err(err) => Err(err),
         }
     }
 }
