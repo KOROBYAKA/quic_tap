@@ -3,6 +3,12 @@ struct TeeUdpSock {
     udp_sock: Arc<dyn AsyncUdpSocket>,
     send_channel: crossbeam_channel::unbounded::sender,
     local_addr: SocketAddr,
+    data_buf: vec![u8, 2000],
+}
+
+struct CaptureData {
+    bufs: Vec<Vec<u8>>,
+    meta: Vec<RecvMeta>,
 }
 
 impl TeeUdpSock {
@@ -29,7 +35,23 @@ impl AsyncUdpSocket for TeeUdpSock {
         bufs: &mut [IoSliceMut<'_>],
         meta: &mut [RecvMeta],
     ) -> Poll<Result<usize>> {
-        self.udp_sock.poll_recv(cx, bufs, meta)
+        match self.udp_sock.poll_recv(cx, bufs, meta) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Ready(Ok(n)) => {
+                let mut data_cap = CaptureData {
+                    bufs: vec![],
+                    meta: vec![],
+                };
+                for i in 0..n {
+                    let meta_c = meta[i].clone();
+                    data_cap.bufs.push(bufs[i][..meta_c.len].to_vec());
+                    data_cap.meta.push(meta_c);
+                }
+
+                Poll::Ready(Ok(n))
+            }
+        }
     }
 
     fn local_addr(&self) -> Result<SocketAddr> {
